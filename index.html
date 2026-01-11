@@ -1,267 +1,278 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apartment Sale</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Share2, Tag, Trash2, Plus, X } from 'lucide-react';
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+export default function ApartmentMarketplace() {
+  const [items, setItems] = useState([
+    { id: 1, name: 'Vintage Lamp', price: 45, image: '🪔', description: 'Beautiful vintage table lamp' },
+    { id: 2, name: 'Bookshelf', price: 120, image: '📚', description: 'Wooden bookshelf, 5 shelves' },
+    { id: 3, name: 'Coffee Table', price: 80, image: '🪑', description: 'Modern glass coffee table' },
+  ]);
+  
+  const [cart, setCart] = useState([]);
+  const [referralCredits, setReferralCredits] = useState(0);
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [newItem, setNewItem] = useState({ name: '', price: '', image: '', description: '' });
+  const [referralCode, setReferralCode] = useState('APARTMENT2026');
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+  const addToCart = (item) => {
+    setCart([...cart, { ...item, cartId: Date.now() }]);
+  };
 
-        header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-        }
+  const removeFromCart = (cartId) => {
+    setCart(cart.filter(item => item.cartId !== cartId));
+  };
 
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
+  const calculateDiscount = (itemPrice, creditsUsed) => {
+    let discountedPrice = itemPrice;
+    for (let i = 0; i < creditsUsed; i++) {
+      discountedPrice = discountedPrice * 0.5;
+    }
+    return itemPrice - discountedPrice;
+  };
 
-        .subtitle {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
+  const calculateTotal = () => {
+    let total = 0;
+    let creditsRemaining = referralCredits;
+    
+    cart.forEach(item => {
+      if (creditsRemaining > 0) {
+        const creditsToUse = Math.min(creditsRemaining, 5); // Max 5 credits per item for practicality
+        const discount = calculateDiscount(item.price, creditsToUse);
+        total += item.price - discount;
+        creditsRemaining -= creditsToUse;
+      } else {
+        total += item.price;
+      }
+    });
+    
+    return total.toFixed(2);
+  };
 
-        .add-item-section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
+  const addNewItem = () => {
+    if (newItem.name && newItem.price) {
+      setItems([...items, {
+        id: Date.now(),
+        name: newItem.name,
+        price: parseFloat(newItem.price),
+        image: newItem.image || '📦',
+        description: newItem.description
+      }]);
+      setNewItem({ name: '', price: '', image: '', description: '' });
+      setShowAddItem(false);
+    }
+  };
 
-        .add-item-section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-        }
+  const simulateReferral = () => {
+    setReferralCredits(referralCredits + 1);
+    setShowReferralModal(false);
+  };
 
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
-        }
-
-        input, textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .items-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .item-card {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-
-        .item-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-        }
-
-        .item-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            font-size: 3em;
-        }
-
-        .item-content {
-            padding: 20px;
-        }
-
-        .item-title {
-            font-size: 1.3em;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .item-price {
-            font-size: 1.5em;
-            color: #667eea;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-
-        .item-description {
-            color: #666;
-            margin-bottom: 15px;
-            line-height: 1.5;
-        }
-
-        .delete-btn {
-            background: #ff4757;
-            padding: 8px 20px;
-            font-size: 14px;
-        }
-
-        .delete-btn:hover {
-            background: #ff3838;
-        }
-
-        .empty-state {
-            text-align: center;
-            color: white;
-            padding: 60px 20px;
-        }
-
-        .empty-state h3 {
-            font-size: 1.5em;
-            margin-bottom: 10px;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2em;
-            }
-
-            .items-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>🏠 Apartment Sale</h1>
-            <p class="subtitle">Items available for purchase</p>
-        </header>
-
-        <div class="add-item-section">
-            <h2>Add New Item</h2>
-            <form id="itemForm">
-                <div class="form-group">
-                    <label for="itemName">Item Name</label>
-                    <input type="text" id="itemName" placeholder="e.g., Vintage Lamp" required>
-                </div>
-                <div class="form-group">
-                    <label for="itemPrice">Price ($)</label>
-                    <input type="number" id="itemPrice" placeholder="e.g., 25" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label for="itemDescription">Description</label>
-                    <textarea id="itemDescription" placeholder="Describe the item's condition, features, etc." required></textarea>
-                </div>
-                <button type="submit">Add Item</button>
-            </form>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">My Apartment Sale</h1>
+              <p className="text-gray-600">Quality items from my home</p>
+            </div>
+            <div className="text-right">
+              <div className="flex items-center gap-2 bg-green-100 px-4 py-2 rounded-lg mb-2">
+                <Tag className="text-green-600" size={20} />
+                <span className="font-semibold text-green-700">{referralCredits} Referral Credits</span>
+              </div>
+              <button
+                onClick={() => setShowReferralModal(true)}
+                className="flex items-center gap-2 bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition"
+              >
+                <Share2 size={18} />
+                Refer a Friend
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div id="itemsContainer" class="items-grid"></div>
-    </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Items List */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">Available Items</h2>
+              <button
+                onClick={() => setShowAddItem(!showAddItem)}
+                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
+              >
+                <Plus size={18} />
+                Add Item
+              </button>
+            </div>
 
-    <script>
-        let items = [];
+            {showAddItem && (
+              <div className="bg-white rounded-xl shadow-lg p-6 mb-4">
+                <h3 className="text-xl font-bold mb-4">Add New Item</h3>
+                <input
+                  type="text"
+                  placeholder="Item Name"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                  className="w-full p-3 border rounded-lg mb-3"
+                />
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={newItem.price}
+                  onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                  className="w-full p-3 border rounded-lg mb-3"
+                />
+                <input
+                  type="text"
+                  placeholder="Emoji (optional)"
+                  value={newItem.image}
+                  onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
+                  className="w-full p-3 border rounded-lg mb-3"
+                />
+                <input
+                  type="text"
+                  placeholder="Description"
+                  value={newItem.description}
+                  onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                  className="w-full p-3 border rounded-lg mb-3"
+                />
+                <button
+                  onClick={addNewItem}
+                  className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition"
+                >
+                  Add Item
+                </button>
+              </div>
+            )}
 
-        function renderItems() {
-            const container = document.getElementById('itemsContainer');
-            
-            if (items.length === 0) {
-                container.innerHTML = '<div class="empty-state"><h3>No items listed yet</h3><p>Add your first item using the form above</p></div>';
-                return;
-            }
-
-            container.innerHTML = items.map((item, index) => `
-                <div class="item-card">
-                    <div class="item-image">📦</div>
-                    <div class="item-content">
-                        <h3 class="item-title">${item.name}</h3>
-                        <div class="item-price">$${parseFloat(item.price).toFixed(2)}</div>
-                        <p class="item-description">${item.description}</p>
-                        <button class="delete-btn" onclick="deleteItem(${index})">Delete</button>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {items.map(item => (
+                <div key={item.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+                  <div className="text-6xl mb-4 text-center">{item.image}</div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">{item.name}</h3>
+                  <p className="text-gray-600 mb-4">{item.description}</p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-2xl font-bold text-purple-600">${item.price}</span>
+                    <button
+                      onClick={() => addToCart(item)}
+                      className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition"
+                    >
+                      Add to Cart
+                    </button>
+                  </div>
                 </div>
-            `).join('');
-        }
+              ))}
+            </div>
+          </div>
 
-        document.getElementById('itemForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('itemName').value;
-            const price = document.getElementById('itemPrice').value;
-            const description = document.getElementById('itemDescription').value;
+          {/* Cart */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-lg p-6 sticky top-6">
+              <div className="flex items-center gap-2 mb-4">
+                <ShoppingCart className="text-purple-500" size={24} />
+                <h2 className="text-2xl font-bold text-gray-800">Cart</h2>
+              </div>
 
-            items.push({ name, price, description });
-            
-            document.getElementById('itemForm').reset();
-            renderItems();
-        });
+              {cart.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+              ) : (
+                <>
+                  <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+                    {cart.map((item, index) => {
+                      let creditsUsedBefore = 0;
+                      for (let i = 0; i < index; i++) {
+                        creditsUsedBefore += Math.min(5, Math.max(0, referralCredits - creditsUsedBefore));
+                      }
+                      const creditsForThis = Math.min(5, Math.max(0, referralCredits - creditsUsedBefore));
+                      const discount = calculateDiscount(item.price, creditsForThis);
+                      const finalPrice = item.price - discount;
 
-        function deleteItem(index) {
-            items.splice(index, 1);
-            renderItems();
-        }
+                      return (
+                        <div key={item.cartId} className="border-b pb-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="font-semibold">{item.name}</p>
+                              <p className="text-sm text-gray-600">${item.price.toFixed(2)}</p>
+                              {creditsForThis > 0 && (
+                                <p className="text-xs text-green-600">
+                                  {creditsForThis} credit{creditsForThis > 1 ? 's' : ''} applied (-${discount.toFixed(2)})
+                                </p>
+                              )}
+                              {creditsForThis > 0 && (
+                                <p className="text-sm font-bold text-purple-600">
+                                  Final: ${finalPrice.toFixed(2)}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeFromCart(item.cartId)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
-        renderItems();
-    </script>
-</body>
-</html>
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-semibold">Total:</span>
+                      <span className="text-2xl font-bold text-purple-600">${calculateTotal()}</span>
+                    </div>
+                    <button className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition font-semibold">
+                      Checkout
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Referral Info */}
+            <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl shadow-lg p-6 mt-6 text-white">
+              <h3 className="text-xl font-bold mb-2">Referral Rewards</h3>
+              <p className="text-sm mb-3">
+                Each friend you refer gets you 1 credit = 50% off one item!
+                Credits stack, so 2 credits = 75% off, 3 credits = 87.5% off, etc.
+              </p>
+              <p className="text-xs opacity-90">
+                Share your code: <span className="font-bold bg-white bg-opacity-20 px-2 py-1 rounded">{referralCode}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Referral Modal */}
+      {showReferralModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold">Refer a Friend</h3>
+              <button onClick={() => setShowReferralModal(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            <p className="mb-4">Share your referral code with friends:</p>
+            <div className="bg-gray-100 p-4 rounded-lg mb-6 text-center">
+              <p className="text-2xl font-bold text-purple-600">{referralCode}</p>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              For demo purposes, click below to simulate a successful referral:
+            </p>
+            <button
+              onClick={simulateReferral}
+              className="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 transition font-semibold"
+            >
+              Simulate Referral (+1 Credit)
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
